@@ -99,9 +99,17 @@ router.post(
       // Add user message
       await ChatService.addMessage(conversationId, 'user', message);
 
-      // Extract intent and generate response
+      // Get conversation history for context
+      const conversation = await ChatService.getConversationHistory(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: 'Conversation not found' });
+      }
+
+      // Extract intent
       const intent = ChatService.extractIntent(message);
-      const assistantResponse = ChatService.generateResponse(intent, message);
+
+      // Generate AI-powered response
+      const assistantResponse = await ChatService.generateAIResponse(message, conversation);
 
       // Add assistant response
       const updatedConversation = await ChatService.addMessage(
@@ -111,9 +119,10 @@ router.post(
       );
 
       res.json({
-        message: 'Message processed',
+        message: 'Message processed successfully',
         conversation: updatedConversation,
         intent,
+        response: assistantResponse,
       });
     } catch (error) {
       res.status(500).json({

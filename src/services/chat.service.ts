@@ -1,4 +1,5 @@
 import { Conversation, IConversation } from '../models/Conversation';
+import { groqService, GroqMessage } from './groq.service';
 
 export class ChatService {
   static async createConversation(
@@ -57,7 +58,27 @@ export class ChatService {
     );
   }
 
-  // Simple NLP: Extract intent from user message
+  // Generate intelligent response using Groq AI
+  static async generateAIResponse(
+    userMessage: string,
+    conversationHistory: IConversation
+  ): Promise<string> {
+    // Convert stored messages to Groq format
+    const groqMessages: GroqMessage[] = conversationHistory.messages.map((msg) => ({
+      role: msg.role,
+      content: msg.content,
+    }));
+
+    try {
+      const { response } = await groqService.processUserMessage(userMessage, groqMessages);
+      return response;
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      return this.generateFallbackResponse(userMessage);
+    }
+  }
+
+  // Extract intent from user message
   static extractIntent(message: string): string {
     const lowerMsg = message.toLowerCase();
 
@@ -80,8 +101,10 @@ export class ChatService {
     return 'general_chat';
   }
 
-  // Generate intelligent response based on intent
-  static generateResponse(intent: string, userMessage: string): string {
+  // Fallback response when AI service is unavailable
+  private static generateFallbackResponse(userMessage: string): string {
+    const intent = this.extractIntent(userMessage);
+
     const responses: Record<string, string> = {
       create_task:
         'I can help you create a task. Please tell me what you would like to do?',
